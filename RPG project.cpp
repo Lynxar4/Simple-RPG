@@ -132,10 +132,16 @@ struct Area
 
 	Enemy getRandomEnemy() const
 	{
-		int randomEnemy{ Random::get(0, 1) };
+		int randomEnemy{ Random::get(0, static_cast<int>(enemies.size() - 1)) };
 		return enemies[randomEnemy];
 	}
 };
+
+void levelUp(Player& p)
+{
+	p.addHealth(5);
+	p.addAttack(5);
+}
 
 void versus(Player& p, Enemy e)
 {
@@ -167,37 +173,9 @@ void versus(Player& p, Enemy e)
 	}
 }
 
-int getChoice()
-{
-	std::cout << "1. Fight\n2. Run away\n";
-	int choice{};
-	std::cin >> choice;
-	return choice;
-}
-
-void handleChoice(Player& p, Enemy e, int choice)
-{
-	if (choice == 1)
-	{
-		versus(p, e);
-	}
-	else if (choice == 2)
-	{
-		std::cout << "You ran like a coward.\n";
-	}
-}
-
-void levelUp(Player& p)
-{
-	p.addHealth(5);
-	p.addAttack(5);
-}
-
-int getInput()
+int getInput(int lowerBound, int upperBound)
 {
 	int choice{};
-	int lowerBound{ 1 };
-	int upperBound{ 4 };
 	while (true)
 	{
 		std::cout << "Enter a number: ";
@@ -222,30 +200,63 @@ int getInput()
 	}
 }
 
-void game()
+int getChoice()
 {
-	Player player{};
+	std::cout << "1. Fight\n2. Run away\n";
+	return getInput(1, 2);
+}
+
+void handleChoice(Player& p, Enemy e, int choice)
+{
+	if (choice == 1)
+	{
+		versus(p, e);
+	}
+	else if (choice == 2)
+	{
+		std::cout << "You ran like a coward.\n";
+	}
+}
+
+std::vector<Area> createWorld()
+{
 	std::vector<Enemy> villageEnemies{ Enemy{Enemy::Type::zombie}, Enemy{Enemy::Type::skeleton} };
 	std::vector<Enemy> mountainEnemies{ Enemy{Enemy::Type::wolf}, Enemy{Enemy::Type::bandit} };
 	std::vector<Enemy> ruinEnemies{ Enemy{Enemy::Type::wizard}, Enemy{Enemy::Type::golem} };
 	std::vector<Area> areas{ Area{"Village", villageEnemies}, Area{"Mountain", mountainEnemies}, Area{"Ancient Ruins", ruinEnemies} };
+	return areas;
+}
 
+void intro(Player& player)
+{
 	std::cout << "Enter your name: ";
 	std::string name{};
 	std::cin >> name;
 	player.setName(name);
 	std::cout << "Hi " << name << ", welcome to simple RPG! ";
+}
+
+void encounter(Player& p, Area& area)
+{
+	Enemy random{ area.getRandomEnemy() };
+	std::cout << "You encountered a " << random.getName() << '\n';
+	handleChoice(p, random, getChoice());
+}
+
+void game()
+{
+	std::vector<Area> areas{ createWorld() };
+	Player player{};
+	intro(player);
 
 	while (player.getHealth() > 0)
 	{
 		std::cout << "Where do you want to go mate?\n";
 		std::cout << "1. Village\n2. Mountains\n3. Ancient ruins\n4. Quit because you're a noob\n";
-		int choice{ getInput() };
+		int choice{ getInput(1, 4) };
 		if (choice == 4) { return; }
 		choice -= 1;
-		std::cout << "You entered the " << areas[choice].m_name << '\n';
-		std::cout << "You encountered a " << areas[choice].getRandomEnemy().getName() << '\n';
-		handleChoice(player, areas[choice].getRandomEnemy(), getChoice());
+		encounter(player, areas[choice]);
 	}
 }
 
