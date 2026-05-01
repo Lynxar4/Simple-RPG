@@ -5,6 +5,13 @@
 #include <limits>
 
 class Enemy;
+double critical();
+
+struct attackResult
+{
+	int damage{};
+	bool isCritical{};
+};
 
 class Player
 {
@@ -23,7 +30,7 @@ public:
 
 	void addAttack(int amount) { m_attack += amount; }
 
-	void attack(Enemy& enemy);
+	attackResult attack(Enemy& enemy);
 
 	void printStats() const
 	{
@@ -103,7 +110,14 @@ public:
 
 	std::string_view getName() const { return m_name; }
 
-	void damaged(int amount) { m_health -= amount; }
+	void damaged(int amount)
+	{
+		m_health -= amount; 
+		if (m_health < 0)
+		{
+			m_health = 0;
+		}
+	}
 
 	void attack(Player& p);
 
@@ -115,9 +129,17 @@ private:
 	int m_experience{ 5 };
 };
 
-void Player::attack(Enemy& enemy)
+attackResult Player::attack(Enemy& enemy)
 {
-	enemy.damaged(m_attack);
+	bool criticalApplied{ false };
+	int damage{ static_cast<int>(m_attack * critical())};
+	enemy.damaged(damage);
+
+	if (damage > m_attack)
+	{
+		criticalApplied = true;
+	}
+	return attackResult{ damage, criticalApplied };
 }
 
 void Enemy::attack(Player& p)
@@ -143,6 +165,18 @@ void levelUp(Player& p)
 	p.addAttack(5);
 }
 
+double critical()
+{
+	int roll{ Random::get(1, 100) };
+	double criticalChance(20);
+	double critDmgMulti{ 1.0 };
+	if (roll <= criticalChance)
+	{
+		critDmgMulti = 1.5;
+	}
+	return critDmgMulti;
+}
+
 void versus(Player& p, Enemy e)
 {
 	std::cout << "You are fighting a " << e.getName() << "!\n";
@@ -150,8 +184,12 @@ void versus(Player& p, Enemy e)
 	std::cout << e.getName() << "'s health: " << e.getHealth() << "\n\n";
 	while (p.getHealth() > 0 && e.getHealth() > 0)
 	{
-		p.attack(e);
-		std::cout << "You hit the " << e.getName() << " for " << p.getAttack() << " damage\n";
+		auto result{ p.attack(e) };
+		if (result.isCritical == true)
+		{
+			std::cout << "Critical hit applied! ";
+		}
+		std::cout << "You hit the " << e.getName() << " for " << result.damage << " damage\n";
 		std::cout << e.getName() << "'s health: " << e.getHealth() << '\n';
 		if (e.getHealth() <= 0)
 		{
